@@ -1,0 +1,144 @@
+-- Online Store Order Management System (PostgreSQL)--
+Create Database Onlinestore_DB
+
+Use onlinestore_DB
+
+-- Customers table --
+
+CREATE TABLE Customers (
+    CUSTOMER_ID int PRIMARY KEY,
+    NAME VARCHAR(100),
+    EMAIL VARCHAR(100),
+    PHONE VARCHAR(20),
+    ADDRESS TEXT
+)
+
+INSERT INTO Customers (CUSTOMER_ID, NAME, EMAIL, PHONE, ADDRESS) VALUES
+(100, 'Arun', 'Arun@amazon.com', '7708456898', ' Anna nagar'),
+(200, 'Kishore', 'Kishore@amazon.com', '6358047576', 'Nungambakkam'),
+(300, 'Hari', 'Hari@amazon.com', '698841558', 'Kodambakkam');
+
+-- Products table --
+
+CREATE TABLE Products (
+    PRODUCT_ID int PRIMARY KEY,
+    PRODUCT_NAME VARCHAR(100),
+    CATEGORY VARCHAR(50),
+    PRICE NUMERIC(10, 2),
+    STOCK INT
+)
+
+INSERT INTO Products (PRODUCT_ID, PRODUCT_NAME, CATEGORY, PRICE, STOCK) VALUES
+(1, 'Keyboard', 'Electronics', 600, 10),
+(2, 'Designer desk lamp', 'Home Goods', 400, 0),
+(3, 'Office Chair', 'Furniture', 1500, 5),
+(4, 'Notebook', 'Stationery', 3.00, 100),
+(5, 'Headphones', 'Electronics', 250, 200);
+
+-- Orders table --
+
+
+CREATE TABLE Orders (
+    ORDER_ID INT PRIMARY KEY,
+    CUSTOMER_ID INT REFERENCES Customers(CUSTOMER_ID),
+    PRODUCT_ID INT REFERENCES Products(PRODUCT_ID),
+    QUANTITY INT,
+    ORDER_DATE DATE
+)
+
+INSERT INTO Orders (ORDER_ID, CUSTOMER_ID, PRODUCT_ID, QUANTITY, ORDER_DATE) VALUES
+(1, 100, 1, 1, '2024-09-10'),
+(2, 100, 2, 2, '2025-05-05'),
+(3, 200, 3, 1, '2025-06-12'),
+(4, 200, 4, 5, '2025-01-20'),
+(5, 300, 5, 10, '2025-01-25'),
+(6, 300, 1, 1, '2025-04-01');
+
+SELECT * FROM Customers
+SELECT * FROM Products
+SELECT * FROM Orders
+
+
+-- Retrieve all orders placed by a specific customer --
+
+SELECT o.ORDER_ID, p.PRODUCT_NAME, o.QUANTITY, o.ORDER_DATE
+FROM Orders o
+JOIN Products p ON o.PRODUCT_ID = p.PRODUCT_ID
+JOIN Customers c ON o.CUSTOMER_ID = c.CUSTOMER_ID
+WHERE c.NAME = 'Arun';
+
+-- Find products that are out of stock --
+
+SELECT PRODUCT_NAME
+FROM Products
+WHERE STOCK = 0;
+
+
+-- Calculate the total revenue generated per product --
+
+SELECT p.PRODUCT_NAME, SUM(o.QUANTITY * p.PRICE) AS TOTAL_REVENUE
+FROM Orders o
+JOIN Products p ON o.PRODUCT_ID = p.PRODUCT_ID
+GROUP BY p.PRODUCT_NAME;
+
+-- Retrieve the top 5 customers by total purchase amount --
+
+SELECT c.NAME, SUM(o.QUANTITY * p.PRICE) AS TOTAL_SPENT
+FROM Orders o
+JOIN Products p ON o.PRODUCT_ID = p.PRODUCT_ID
+JOIN Customers c ON o.CUSTOMER_ID = c.CUSTOMER_ID
+GROUP BY c.CUSTOMER_ID
+ORDER BY TOTAL_SPENT DESC
+LIMIT 5;
+
+-- Find customers who placed orders in at least two different product categories --
+
+SELECT c.NAME
+FROM Orders o
+JOIN Products p ON o.PRODUCT_ID = p.PRODUCT_ID
+JOIN Customers c ON o.CUSTOMER_ID = c.CUSTOMER_ID
+GROUP BY c.CUSTOMER_ID
+HAVING COUNT(DISTINCT p.CATEGORY) >= 2;
+
+
+-- Analytics: --
+-- Find the month with the highest total sales --
+
+SELECT
+    DATE_FORMAT(o.ORDER_DATE, '%Y-%m') AS ORDER_MONTH,
+    SUM(o.QUANTITY * p.PRICE) AS MONTHLY_SALES
+FROM
+    Orders o
+JOIN
+    Products p ON o.PRODUCT_ID = p.PRODUCT_ID
+GROUP BY
+    ORDER_MONTH
+ORDER BY
+    MONTHLY_SALES DESC
+LIMIT 1;
+
+-- Identify products with no orders in the last 6 months --
+
+SELECT PRODUCT_NAME
+FROM Products
+WHERE PRODUCT_ID NOT IN (
+    SELECT PRODUCT_ID
+    FROM Orders
+    WHERE ORDER_DATE >= CURRENT_DATE - INTERVAL 6 MONTH
+);
+
+
+-- Retrieve customers who have never placed an order --
+
+SELECT NAME
+FROM Customers
+WHERE CUSTOMER_ID NOT IN (
+    SELECT DISTINCT CUSTOMER_ID FROM Orders
+);
+
+-- Calculate the average order value across all orders --
+
+SELECT AVG(o.QUANTITY * p.PRICE) AS AVERAGE_ORDER_VALUE
+FROM Orders o
+JOIN Products p ON o.PRODUCT_ID = p.PRODUCT_ID;
+
